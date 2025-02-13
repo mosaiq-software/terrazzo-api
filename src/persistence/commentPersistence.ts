@@ -1,6 +1,6 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from './dbHelper';
-import { Comment } from '@mosaiq/terrazzo-common/types';
+import {Card, Comment} from '@mosaiq/terrazzo-common/types';
 
 class CommentModel extends Model {}
 CommentModel.init({
@@ -8,7 +8,7 @@ CommentModel.init({
         type: DataTypes.STRING,
         primaryKey: true
     },
-    cardId: DataTypes.STRING,
+    parentID: DataTypes.STRING,
     content: DataTypes.STRING,
     postedBy: DataTypes.STRING,
     postedAt: DataTypes.DATE,
@@ -21,18 +21,18 @@ export const getCommentById = async (id: string) => {
     return (await CommentModel.findByPk(id))?.toJSON() as Comment | null;
 }
 
-export const getCommentsByCardId = async (cardId: string) => {
-    return (await CommentModel.findAll({ where: { cardId } })).map(comment => comment.toJSON()) as Comment[];
+export const getCommentsByCardId = async (parentId: string) => {
+    return (await CommentModel.findAll({ where: { parentId } })).map(comment => comment.toJSON()) as Comment[];
 }
 
 export const getCommentsByUserId = async (userId: string) => {
     return (await CommentModel.findAll({ where: { postedBy: userId } })).map(comment => comment.toJSON()) as Comment[];
 }
 
-export const createCommentOnCard = async (comment: Comment, cardId: string) => {
+export const createCommentOnCard = async (comment: Comment, parentId: string) => {
     return await CommentModel.create({
         id: comment.id,
-        cardId,
+        parentId,
         content: comment.content,
         postedBy: comment.postedBy,
         postedAt: comment.postedAt,
