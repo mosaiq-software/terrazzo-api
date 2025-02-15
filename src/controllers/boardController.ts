@@ -1,6 +1,6 @@
-import {Board} from "../../../terrazzo-common/src/types";
-import {createBoard, getBoardById, getBoardMembers} from "@trz-api/persistence/boardPersistence";
-import {getLabelsByBoardId} from "@trz-api/persistence/labelPersistence";
+import {Board, Label} from "../../../terrazzo-common/src/types";
+import {createBoard, getBoardById, getBoardMembers, updateBoard} from "@trz-api/persistence/boardPersistence";
+import {getLabelsByBoardId, updateLabel} from "@trz-api/persistence/labelPersistence";
 import {getAllListsOfBoard} from "@trz-api/controllers/listController";
 
 //Gets
@@ -77,3 +77,36 @@ export async function addBoard(name:string, boardCode:string) {
 }
 
 //Updates
+export async function updateBoardDetails(boardID: string, boardName: string, boardCode: string, labels: Label[], visibility: string){
+    const boardDetails = await getBoardById(boardID);
+    if (boardDetails == null) {
+        throw new Error("Board not found");
+    }
+    if(boardName.length > 50) {
+        throw new Error("Board Name must be 50 characters or less");
+    }
+    boardDetails.name = boardName;
+    boardDetails.boardCode = boardCode;
+
+    try {
+        await updateBoard(boardDetails);
+        const allLabels: Label[] = await getLabelsByBoardId(boardID); 
+        const allLabelIds = allLabels.map(label => label.id); 
+        const labelUpdatePromises = labels.map(async (label) => {
+            if (!allLabelIds.includes(label.id)) {
+                throw new Error(`Label ID ${label.id} does not exist on this board`);
+            }
+            const updatedLabel = {
+                id: label.id,
+                name: label.name,
+                color: label.color
+            }
+            return updateLabel(updatedLabel);
+        });
+        await Promise.all(labelUpdatePromises);
+
+        return true;
+    }catch (e) {
+        throw new Error("Failed to save board" + e);
+    }
+ }

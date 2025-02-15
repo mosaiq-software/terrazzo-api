@@ -8,10 +8,11 @@ import {
     broadcastToMyselfAndMyRoom
 } from './socketUtils';
 import { ClientSE, ClientSEPayload, ClientSEReply, ServerSE, ServerSEPayload } from '@mosaiq/terrazzo-common/socketTypes';
-import {addBoard, getWholeBoard} from "@trz-api/controllers/boardController";
+import {addBoard, getWholeBoard, updateBoardDetails} from "@trz-api/controllers/boardController";
 import {addList, updateListName} from "@trz-api/controllers/listController";
 import {addCard} from "@trz-api/controllers/cardController";
 import { getTextBlockById } from '@trz-api/persistence/textBlockPersistence';
+import { getBoardById } from '@trz-api/persistence/boardPersistence';
 import { isValidTextBlockEvents } from '@mosaiq/terrazzo-common/utils/textUtils';
 import { handleTextBlockEvents } from '@trz-api/controllers/textBlockController';
 
@@ -159,6 +160,34 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
             broadcastToMyRoom(socket, ServerSE.TEXT_CARET, payload);
         } catch (error: any) {
             reply(undefined, error.message);
+        }
+    });
+
+    socket.on(ClientSE.UPDATE_BOARD_SETTINGS, async (data: ClientSEPayload[ClientSE.UPDATE_BOARD_SETTINGS], reply: ClientSEReply<ClientSE.UPDATE_BOARD_SETTINGS>) => {
+        try {
+            if (!data) {
+                throw new Error('No Board data provided');
+            }
+        const currentBoard = await getBoardById(data.boardID); 
+        if (!currentBoard) {
+            throw new Error('Board not found');
+        }
+
+        const finaldBoardData = {
+            boardID: data.boardID, 
+            boardName: data.boardName ?? currentBoard.name, 
+            boardCode: data.boardCode ?? currentBoard.boardCode, 
+            labels: data.labels ?? [], 
+            visibility: "Public"
+        };
+            const result = await updateBoardDetails(finaldBoardData.boardID, finaldBoardData.boardName, finaldBoardData.boardCode, finaldBoardData.labels, finaldBoardData.visibility);
+            const payload = { boardID: data.boardID, boardName: data.boardName, boardCode: data.boardCode, labels: data.labels, visibility: data.visibility };
+            if (result){
+                broadcastToMyselfAndMyRoom(socket, ServerSE.UPDATE_BOARD_SETTINGS, payload);
+            }
+        } catch (error: any) {
+            console.error("Error updating Settings section", error);
+            reply(error.message);
         }
     });
 };
