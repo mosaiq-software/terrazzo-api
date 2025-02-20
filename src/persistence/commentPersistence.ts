@@ -10,8 +10,8 @@ CommentModel.init({
     },
     parentID: DataTypes.STRING,
     content: DataTypes.STRING,
-    postedBy: DataTypes.STRING,
-    postedAt: DataTypes.DATE,
+    postedById: DataTypes.STRING,
+    postedAt: DataTypes.STRING,
     archived: DataTypes.BOOLEAN
 }, { sequelize, modelName: 'commentModel' });
 
@@ -26,7 +26,7 @@ export const getCommentsByCardId = async (parentId: string) => {
 }
 
 export const getCommentsByUserId = async (userId: string) => {
-    return (await CommentModel.findAll({ where: { postedBy: userId } })).map(comment => comment.toJSON()) as Comment[];
+    return (await CommentModel.findAll({ where: { postedById: userId } })).map(comment => comment.toJSON()) as Comment[];
 }
 
 export const createCommentOnCard = async (comment: Comment, parentId: string) => {
@@ -34,7 +34,7 @@ export const createCommentOnCard = async (comment: Comment, parentId: string) =>
         id: comment.id,
         parentId,
         content: comment.content,
-        postedBy: comment.postedBy,
+        postedById: comment.postedById,
         postedAt: comment.postedAt,
         archived: false
     });

@@ -14,6 +14,7 @@ import {addCard} from "@trz-api/controllers/cardController";
 import { getTextBlockById } from '@trz-api/persistence/textBlockPersistence';
 import { isValidTextBlockEvents } from '@mosaiq/terrazzo-common/utils/textUtils';
 import { handleTextBlockEvents } from '@trz-api/controllers/textBlockController';
+import { addComment } from '@trz-api/controllers/commentController';
 
 export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
     socket.on(ClientSE.SET_ROOM, async (room: ClientSEPayload[ClientSE.SET_ROOM], reply: ClientSEReply<ClientSE.SET_ROOM>) => {
@@ -159,6 +160,21 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
             broadcastToMyRoom(socket, ServerSE.TEXT_CARET, payload);
         } catch (error: any) {
             reply(undefined, error.message);
+        }
+    });
+
+    socket.on(ClientSE.CREATE_COMMENT, async (data: ClientSEPayload[ClientSE.CREATE_COMMENT], reply: ClientSEReply<ClientSE.CREATE_COMMENT>) => {
+        try {
+            if (!data) {
+                throw new Error('No comment data provided');
+            }
+            console.log(data)
+            const comment = await addComment(data.cardId, data.content, data.postedAt, data.postedById);
+            broadcastToMyselfAndMyRoom(socket, ServerSE.CREATE_COMMENT, comment);
+            reply({ commentId: comment });
+        } catch (error: any) {
+            console.error("Error creating comment", error);
+            reply({ commentId: "" }, error.message);
         }
     });
 };

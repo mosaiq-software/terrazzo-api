@@ -1,7 +1,7 @@
 //Gets
 
 import {createCommentOnCard, getCommentsByCardId} from "@trz-api/persistence/commentPersistence";
-import {User, Comment} from "@mosaiq/terrazzo-common/types";
+import {User, Comment, ISO_Date} from "@mosaiq/terrazzo-common/types";
 import {getCardById} from "@trz-api/persistence/cardPersistence";
 
 /**
@@ -29,7 +29,7 @@ export async function getAllCommentsOfCard(cardID: string) {
  * @param listID
  * @param cardName
  */
-export async function addComment(cardId: string, content: string, postedAt: Date, postedBy: User, archived: boolean) {
+export async function addComment(cardId: string, content: string, postedAt: ISO_Date, postedById: string) {
     //pull board from db with ID
     const updatingCard = await getCardById(cardId);
 
@@ -42,8 +42,8 @@ export async function addComment(cardId: string, content: string, postedAt: Date
         cardId: cardId,
         content: content,
         postedAt: postedAt,
-        postedBy: postedBy,
-        archived: archived
+        postedById: postedById,
+        archived: false,
     };
 
     //creates comment before returning
