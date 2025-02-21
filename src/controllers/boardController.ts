@@ -1,6 +1,6 @@
 import {Board, Label} from "../../../terrazzo-common/src/types";
 import {createBoard, getBoardById, getBoardMembers, updateBoard} from "@trz-api/persistence/boardPersistence";
-import {getLabelsByBoardId, updateLabel} from "@trz-api/persistence/labelPersistence";
+import {getLabelsByBoardId, updateLabel, createLabelOnBoard} from "@trz-api/persistence/labelPersistence";
 import {getAllListsOfBoard} from "@trz-api/controllers/listController";
 
 //Gets
@@ -79,7 +79,7 @@ export async function addBoard(name:string, boardCode:string) {
 //Updates
 export async function updateBoardDetails(boardID: string, boardName: string, boardCode: string, labels: Label[], visibility: string){
     const boardDetails = await getBoardById(boardID);
-    if (boardDetails == null) {
+    if (!boardDetails) {
         throw new Error("Board not found");
     }
     if(boardName.length > 50) {
@@ -90,18 +90,19 @@ export async function updateBoardDetails(boardID: string, boardName: string, boa
 
     try {
         await updateBoard(boardDetails);
-        const allLabels: Label[] = await getLabelsByBoardId(boardID); 
+        const allLabels = await getLabelsByBoardId(boardID); 
         const allLabelIds = allLabels.map(label => label.id); 
         const labelUpdatePromises = labels.map(async (label) => {
-            if (!allLabelIds.includes(label.id)) {
-                throw new Error(`Label ID ${label.id} does not exist on this board`);
+            if (allLabelIds.includes(label.id)) {
+                const updatedLabel = {
+                    id: label.id,
+                    name: label.name,
+                    color: label.color
+                };
+                return updateLabel(updatedLabel);
+            } else {
+              return createLabelOnBoard(label, boardID);
             }
-            const updatedLabel = {
-                id: label.id,
-                name: label.name,
-                color: label.color
-            }
-            return updateLabel(updatedLabel);
         });
         await Promise.all(labelUpdatePromises);
 
@@ -110,3 +111,4 @@ export async function updateBoardDetails(boardID: string, boardName: string, boa
         throw new Error("Failed to save board" + e);
     }
  }
+ 
