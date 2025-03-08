@@ -24,6 +24,7 @@ import {checkUsernameTaken, getOrCreateUserByGithubId, setupUser} from "@trz-api
 import { addOrganization, getOrganizationWithProjects, updateOrganizationFromPartial } from '@trz-api/controllers/organizationController';
 import { addProject, getProjectWithBoards, updateProjectFromPartial } from '@trz-api/controllers/projectController';
 import { getUsersEntities } from '@trz-api/controllers/userController';
+import {ListType} from "../../../terrazzo-common/dist/constants";
 
 export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
     socket.on(ClientSE.SET_ROOM, async (room: ClientSEPayload[ClientSE.SET_ROOM], reply: ClientSEReply<ClientSE.SET_ROOM>) => {
@@ -152,7 +153,7 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
             if (!data) {
                 throw new Error('No list data provided');
             }
-            const payload:ServerSEPayload[ServerSE.ADD_LIST] = await addList(data.boardID, data.listName);
+            const payload:ServerSEPayload[ServerSE.ADD_LIST] = await addList(data.boardID, data.listName, ListType.NORMAL, data.start, data.end);
             broadcastToMyselfAndMyRoom(socket, ServerSE.ADD_LIST, payload);
             reply(payload.id);
         } catch (error: any) {

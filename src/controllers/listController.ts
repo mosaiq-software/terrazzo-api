@@ -10,6 +10,7 @@ import {getBoardById} from "@trz-api/persistence/boardPersistence";
 import {BoardId, List, ListId} from "@mosaiq/terrazzo-common/types";
 import {getAllCardsOfList} from "@trz-api/controllers/cardController";
 import { arrayMove, updateBaseFromPartial } from "@mosaiq/terrazzo-common/utils/arrayUtils";
+import {ListType} from "../../../terrazzo-common/dist/constants";
 
 //Gets
 
@@ -47,8 +48,11 @@ export async function getAllListsOfBoard(boardID:BoardId, archived:boolean) {
  * Returns the ID of the new list
  * @param boardID
  * @param listName
+ * @param start
+ * @param end
+ * @param type
  */
-export async function addList(boardID:BoardId, listName:string) {
+export async function addList(boardID:BoardId, listName:string, type:ListType, start?:Date, end?:Date) {
 
     //pull board from db with ID
     const updatingBoard = await getBoardById(boardID);
@@ -62,6 +66,9 @@ export async function addList(boardID:BoardId, listName:string) {
             id:crypto.randomUUID(),
             boardId:boardID,
             name:listName,
+            type:type,
+            startDate:start? start:null,
+            endDate:end? end:null,
             cards:[],
             archived:false,
             order: await getNextListOrder(boardID)
@@ -77,6 +84,11 @@ export async function updateListFromPartial(listId: ListId, partial:Partial<List
     const updatingList = await getListById(listId);
     if (updatingList == null) {
         throw new Error("List not found");
+    }
+
+    if(partial.archived && updatingList.type !== ListType.NORMAL){
+        throw new Error("Cannot archive special list");
+
     }
 
     const updated = updateBaseFromPartial<List>(updatingList, partial);

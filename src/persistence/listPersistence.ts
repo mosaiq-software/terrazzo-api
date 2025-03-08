@@ -10,6 +10,9 @@ ListModel.init({
     },
     boardId: DataTypes.STRING,
     name: DataTypes.STRING,
+    type: DataTypes.STRING,
+    startDate: DataTypes.DATE,
+    endDate: DataTypes.DATE,
     archived: DataTypes.BOOLEAN,
     order: DataTypes.INTEGER
 }, { sequelize, modelName: 'listModel' });
@@ -45,6 +48,9 @@ export const createListOnBoard = async (list: List, boardId: BoardId) => {
         id: list.id,
         boardId,
         name: list.name,
+        type: list.type,
+        startDate: list.startDate,
+        endDate: list.endDate,
         archived: false,
         order: list.order
     });

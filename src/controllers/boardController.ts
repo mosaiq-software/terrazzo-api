@@ -1,8 +1,9 @@
 import {createBoard, getBoardById, updateBoard} from "@trz-api/persistence/boardPersistence";
 import {getLabelsByBoardId} from "@trz-api/persistence/labelPersistence";
-import {getAllListsOfBoard} from "@trz-api/controllers/listController";
+import {addList, getAllListsOfBoard} from "@trz-api/controllers/listController";
 import { Board, BoardHeader, BoardId, ProjectId } from "@mosaiq/terrazzo-common/types";
 import { updateBaseFromPartial } from "@mosaiq/terrazzo-common/utils/arrayUtils";
+import {ListType} from "../../../terrazzo-common/dist/constants";
 
 //Gets
 
@@ -40,6 +41,7 @@ export async function getWholeBoard(boardID:BoardId) {
  * Returns the ID of the new board
  * @param name
  * @param boardCode
+ * @param projectId
  */
 export async function addBoard(name:string, boardCode:string, projectId:ProjectId) {
     if(name.length > 50) {
@@ -65,6 +67,9 @@ export async function addBoard(name:string, boardCode:string, projectId:ProjectI
 
     try{
         await createBoard(newBoard);
+        await addList(newBoard.id, "Done", ListType.DONE);
+        await addList(newBoard.id, "In Progress", ListType.DOING);
+        await addList(newBoard.id, "Backlog", ListType.BACKLOG);
         return newBoard.id;
     }catch (e) {
         throw new Error("Failed to save board" + e);
