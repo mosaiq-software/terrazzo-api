@@ -80,7 +80,7 @@ async function createList(req:Request, res:Response) {
     }
 
     try {
-        const list = await addList(req.body.boardId, req.body.name);
+        const list = await addList(req.body.boardId, req.body.name, req.body.type, req.body.start, req.body.end);
         res.status(200).json({list: list});
     } catch (e: any) {
         console.log("Error creating List");
