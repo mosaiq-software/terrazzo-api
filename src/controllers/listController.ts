@@ -3,12 +3,12 @@ import {
     getListById,
     getListsBoardId,
     getListsByBoardIdOrder,
-    getNextListOrder, updateList,
+    getNextListOrder, getSpecialListIdByBoardId, updateList,
     updateListOrder
 } from "@trz-api/persistence/listPersistence";
 import {getBoardById} from "@trz-api/persistence/boardPersistence";
 import {BoardId, List, ListId} from "@mosaiq/terrazzo-common/types";
-import {getAllCardsOfList} from "@trz-api/controllers/cardController";
+import {getAllCardsOfList, updateCardFromPartial} from "@trz-api/controllers/cardController";
 import { arrayMove, updateBaseFromPartial } from "@mosaiq/terrazzo-common/utils/arrayUtils";
 import {ListType} from "../../../terrazzo-common/dist/constants";
 
@@ -88,7 +88,10 @@ export async function updateListFromPartial(listId: ListId, partial:Partial<List
 
     if(partial.archived && updatingList.type !== ListType.NORMAL){
         throw new Error("Cannot archive special list");
+    }
 
+    if(partial.archived && partial.archived === true){
+        await endSprint(listId);
     }
 
     const updated = updateBaseFromPartial<List>(updatingList, partial);
@@ -129,5 +132,19 @@ export async function moveList(listID: string, toPosition: number) {
     } catch (error: any) {
         console.error(error);
         throw error;
+    }
+}
+
+async function endSprint(listID: ListId) {
+    const backlogID = await getSpecialListIdByBoardId(await getBoardIDFromListID(listID), ListType.BACKLOG);
+
+    if(!backlogID){
+        throw new Error("No backlog found");
+    }
+
+    const cards = await getAllCardsOfList(listID, false);
+
+    for (const card of cards) {
+        await updateCardFromPartial(card.id, {listId:backlogID});
     }
 }

@@ -1,6 +1,7 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from './dbHelper';
 import { BoardId, List, ListId } from '@mosaiq/terrazzo-common/types';
+import {ListType} from "../../../terrazzo-common/dist/constants";
 
 class ListModel extends Model {}
 ListModel.init({
@@ -22,6 +23,10 @@ sequelize.sync();
 
 export const getListById = async (id: ListId) => {
     return (await ListModel.findByPk(id))?.toJSON() as List | null;
+}
+
+export const getSpecialListIdByBoardId = async (boardId: BoardId, type: ListType) => {
+    return ((await ListModel.findOne({where: {boardId, type}}))?.toJSON() as List).id ?? null;
 }
 
 export const getListsByBoardId = async (boardId: BoardId) => {

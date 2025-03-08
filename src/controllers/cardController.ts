@@ -5,7 +5,7 @@ import {
     getCardsByListIdShortUp,
     getCardsByListIdUp,
     updateCard,
-    updateCardList,
+    updateCardList, updateCardListAndSprint,
     updateCardOrder,
 } from "@trz-api/persistence/cardPersistence";
 import {getListById, getNextListOrder} from "@trz-api/persistence/listPersistence";
@@ -45,8 +45,9 @@ export async function getAllCardsOfList(listID: ListId, archived: boolean) {
  * Returns the ID of the new card
  * @param listID
  * @param cardName
+ * @param sprintID
  */
-export async function addCard(listID:ListId, cardName:string) {
+export async function addCard(listID:ListId, cardName:string, sprintID?:ListId) {
     //pull board from db with ID
     const updatingList = await getListById(listID);
 
@@ -69,7 +70,7 @@ export async function addCard(listID:ListId, cardName:string) {
         descriptionTextBlockId: cardUid, // placeholder id
         priority:null,
         storyPoints:null,
-        sprintId:"",
+        sprintId:sprintID? sprintID : null,
         assignees:[],
         comments:[],
         labels:[],
@@ -140,7 +141,7 @@ export async function getBoardIDFromCardID(cardID:CardId) {
 /*
     Remove the card from its old list and move it to the new one at the position
 */
-export async function moveCardToList(cardId: CardId, toListId:ListId, position?:number) {
+export async function moveCardToList(cardId: CardId, toListId:ListId, toSprint?:ListId, position?:number) {
     try {
         if(position === undefined){
             const nextOrder = await getNextListOrder(toListId);
@@ -157,7 +158,7 @@ export async function moveCardToList(cardId: CardId, toListId:ListId, position?:
                 throw new Error("Could not find card that was removed!");
             }
         }
-        await addCardToList(card.id, toListId, position);
+        await addCardToList(card.id, toListId, position, toSprint);
     } catch (error: any) {
         console.error(`Error moving card ${cardId} to list ${toListId}: ${error}`);
         throw error;
@@ -203,7 +204,7 @@ export const removeCardFromList = async (cardId:CardId): Promise<Card> => {
 /**
  * Add a card to a list. The card must not be in any list to allow this to happen
  */
-export const addCardToList = async (cardId:CardId, toList: ListId, atPosition:number): Promise<void> => {
+export const addCardToList = async (cardId:CardId, toList: ListId, atPosition:number, toSprint?:ListId): Promise<void> => {
     try {
         const addCard = await getCardById(cardId);
         if(!addCard){
@@ -218,7 +219,15 @@ export const addCardToList = async (cardId:CardId, toList: ListId, atPosition:nu
         }
         atPosition = Math.max(0, Math.min(atPosition, cards.length));
         cards.splice(atPosition, 0 , addCard);
-        const promises = [updateCardList(addCard.id, toList)];
+
+        let promises;
+
+        if(toSprint !== undefined){
+            promises = [updateCardListAndSprint(addCard.id, toList, toSprint)];
+        }else{
+            promises = [updateCardList(addCard.id, toList)];
+        }
+        //const promises = [updateCardList(addCard.id, toList, toSprint)];
         for(let i = 0; i < cards.length; i++) {
             cards[i].order = i;
             promises.push(updateCardOrder(cards[i].id, i));

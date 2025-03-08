@@ -58,6 +58,7 @@ export const updateCard = async (card: Card) => {
     return await CardModel.update({
         cardNumber: card.cardNumber,
         name: card.name,
+        listId: card.listId,
         descriptionTextBlockId: card.descriptionTextBlockId,
         priority: card.priority,
         storyPoints: card.storyPoints,
@@ -86,6 +87,10 @@ export const getNextCardOrder = async (listId: string) => {
 
 export const updateCardList = async (cardId:string, listId:string) => {
     return await CardModel.update({listId}, {where: { id: cardId}});
+}
+
+export const updateCardListAndSprint = async (cardId:string, listId:string, sprintId:string) => {
+    return await CardModel.update({listId, sprintId}, {where: { id: cardId}});
 }
 
 export const updateCardOrder = async (cardId:string, order:number) => {

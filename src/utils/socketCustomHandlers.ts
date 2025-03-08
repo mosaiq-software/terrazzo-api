@@ -167,7 +167,7 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
             if (!data) {
                 throw new Error('No card data provided');
             }
-            const payload: ServerSEPayload[ServerSE.ADD_CARD] = await addCard(data.listID, data.cardName);
+            const payload: ServerSEPayload[ServerSE.ADD_CARD] = await addCard(data.listID, data.cardName, data.sprintID);
             broadcastToMyselfAndMyRoom(socket, ServerSE.ADD_CARD, payload);
             reply(payload.id);
         } catch (error: any) {
@@ -298,7 +298,7 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
 
     socket.on(ClientSE.MOVE_CARD, async (data: ClientSEPayload[ClientSE.MOVE_CARD], reply: ClientSEReply<ClientSE.MOVE_CARD>) => {
         try {
-            await moveCardToList(data.cardId, data.toList, data.position);
+            await moveCardToList(data.cardId, data.toList, data.toSprint, data.position);
             const payload: ServerSEPayload[ServerSE.MOVE_CARD] = {...data};
             broadcastToMyRoom(socket, ServerSE.MOVE_CARD, payload);
         } catch (error: any) {
