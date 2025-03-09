@@ -10,7 +10,7 @@ import {
 } from './socketUtils';
 import { ClientSE, ClientSEPayload, ClientSEReply, ServerSE, ServerSEPayload, RoomType } from '@mosaiq/terrazzo-common/socketTypes';
 import {addBoard, getWholeBoard, updateBoardFromPartial} from "@trz-api/controllers/boardController";
-import {addList, moveList, updateListFromPartial} from "@trz-api/controllers/listController";
+import {addList, endSprint, moveList, updateListFromPartial} from "@trz-api/controllers/listController";
 import {
     addCard,
     getBoardIDFromCardID,
@@ -25,6 +25,7 @@ import { addOrganization, getOrganizationWithProjects, updateOrganizationFromPar
 import { addProject, getProjectWithBoards, updateProjectFromPartial } from '@trz-api/controllers/projectController';
 import { getUsersEntities } from '@trz-api/controllers/userController';
 import {ListType} from "../../../terrazzo-common/dist/constants";
+import {List} from "../../../terrazzo-common/dist/types";
 
 export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
     socket.on(ClientSE.SET_ROOM, async (room: ClientSEPayload[ClientSE.SET_ROOM], reply: ClientSEReply<ClientSE.SET_ROOM>) => {
@@ -239,6 +240,22 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
             broadcastToAnotherRoom(socket, RoomType.MOUSE, await getBoardIDFromCardID(data.id), ServerSE.UPDATE_CARD_FIELD, payload);
         } catch (error: any) {
             console.error("Error updating card fields", error);
+            reply(undefined, error.message);
+        }
+    });
+
+    socket.on(ClientSE.END_SPRINT, async (data: ClientSEPayload[ClientSE.END_SPRINT], reply: ClientSEReply<ClientSE.END_SPRINT>) => {
+        try {
+            if (!data) {
+                throw new Error('No list id provided');
+            }
+            const partial:Partial<List> = {archived: true, order: -1};
+            await updateListFromPartial(data, partial);
+            await endSprint(data);
+            const payload:ServerSEPayload[ServerSE.UPDATE_LIST_FIELD] = {...partial, id: data};
+            broadcastToMyselfAndMyRoom(socket, ServerSE.UPDATE_LIST_FIELD, payload);
+        } catch (error: any) {
+            console.error("Error updating list fields", error);
             reply(undefined, error.message);
         }
     });

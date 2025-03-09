@@ -90,10 +90,6 @@ export async function updateListFromPartial(listId: ListId, partial:Partial<List
         throw new Error("Cannot archive special list");
     }
 
-    if(partial.archived && partial.archived === true){
-        await endSprint(listId);
-    }
-
     const updated = updateBaseFromPartial<List>(updatingList, partial);
     try {
         await updateList(updated);
@@ -135,7 +131,8 @@ export async function moveList(listID: string, toPosition: number) {
     }
 }
 
-async function endSprint(listID: ListId) {
+export async function endSprint(listID: ListId) {
+    console.log("Ending sprint");
     const backlogID = await getSpecialListIdByBoardId(await getBoardIDFromListID(listID), ListType.BACKLOG);
 
     if(!backlogID){
@@ -145,6 +142,13 @@ async function endSprint(listID: ListId) {
     const cards = await getAllCardsOfList(listID, false);
 
     for (const card of cards) {
-        await updateCardFromPartial(card.id, {listId:backlogID});
+        await updateCardFromPartial(card.id, {listId:backlogID, order: 1});
     }
+
+    const newCards = cards.map(card => {
+        return {...card, listId:backlogID, order: 1};
+    })
+
+    console.log(cards);
+    console.log(newCards);
 }
