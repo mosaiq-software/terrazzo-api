@@ -16,7 +16,9 @@ CardModel.init({
     storyPoints: DataTypes.INTEGER,
     sprintId: DataTypes.STRING,
     archived: DataTypes.BOOLEAN,
-    order: DataTypes.INTEGER
+    order: DataTypes.INTEGER,
+    startDate: DataTypes.DATE,
+    endDate: DataTypes.DATE
 }, { sequelize, modelName: 'cardModel' });
 
 sequelize.sync();
@@ -50,7 +52,9 @@ export const createCardOnList = async (card: Card, listId: ListId) => {
         storyPoints: card.storyPoints,
         sprintId: card.sprintId,
         archived: false,
-        order: card.order
+        order: card.order,
+        startDate: card.startDate,
+        endDate: card.endDate
     });
 };
 
@@ -89,8 +93,16 @@ export const updateCardList = async (cardId:string, listId:string) => {
     return await CardModel.update({listId}, {where: { id: cardId}});
 }
 
-export const updateCardListAndSprint = async (cardId:string, listId:string, sprintId:string) => {
-    return await CardModel.update({listId, sprintId}, {where: { id: cardId}});
+export const updateCardListAndSprint = async (cardId:string, listId:string, sprintId:string|null) => {
+    return await CardModel.update({listId, sprintId, startDate: null, endDate: null}, {where: { id: cardId}});
+}
+
+export const updateCardStartDate = async (cardId:string, startDate:Date | null) => {
+    return await CardModel.update({startDate}, {where: { id: cardId}});
+}
+
+export const updateCardEndDate = async (cardId:string, endDate:Date | null) => {
+    return await CardModel.update({endDate}, {where: { id: cardId}});
 }
 
 export const updateCardOrder = async (cardId:string, order:number) => {

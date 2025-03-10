@@ -11,6 +11,7 @@ import {BoardId, List, ListId} from "@mosaiq/terrazzo-common/types";
 import {getAllCardsOfList, updateCardFromPartial} from "@trz-api/controllers/cardController";
 import { arrayMove, updateBaseFromPartial } from "@mosaiq/terrazzo-common/utils/arrayUtils";
 import {ListType} from "../../../terrazzo-common/dist/constants";
+import {CardId} from "../../../terrazzo-common/dist/types";
 
 //Gets
 
@@ -131,24 +132,14 @@ export async function moveList(listID: string, toPosition: number) {
     }
 }
 
-export async function endSprint(listID: ListId) {
-    console.log("Ending sprint");
-    const backlogID = await getSpecialListIdByBoardId(await getBoardIDFromListID(listID), ListType.BACKLOG);
-
-    if(!backlogID){
-        throw new Error("No backlog found");
+export async function getListType(listID: ListId) {
+    const list = await getListById(listID);
+    if (list == null) {
+        throw new Error("List not found");
     }
+    return list.type;
+}
 
-    const cards = await getAllCardsOfList(listID, false);
-
-    for (const card of cards) {
-        await updateCardFromPartial(card.id, {listId:backlogID, order: 1});
-    }
-
-    const newCards = cards.map(card => {
-        return {...card, listId:backlogID, order: 1};
-    })
-
-    console.log(cards);
-    console.log(newCards);
+export async function endSprint(listID: ListId){
+    //create sprint report here
 }

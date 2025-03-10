@@ -251,9 +251,10 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
             }
             const partial:Partial<List> = {archived: true, order: -1};
             await updateListFromPartial(data, partial);
-            await endSprint(data);
-            const payload:ServerSEPayload[ServerSE.UPDATE_LIST_FIELD] = {...partial, id: data};
-            broadcastToMyselfAndMyRoom(socket, ServerSE.UPDATE_LIST_FIELD, payload);
+            const listPayload:ServerSEPayload[ServerSE.UPDATE_LIST_FIELD] = {...partial, id: data};
+            broadcastToMyselfAndMyRoom(socket, ServerSE.UPDATE_LIST_FIELD, listPayload);
+
+            //make sprint report here
         } catch (error: any) {
             console.error("Error updating list fields", error);
             reply(undefined, error.message);
@@ -315,8 +316,9 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
 
     socket.on(ClientSE.MOVE_CARD, async (data: ClientSEPayload[ClientSE.MOVE_CARD], reply: ClientSEReply<ClientSE.MOVE_CARD>) => {
         try {
-            await moveCardToList(data.cardId, data.toList, data.toSprint, data.position);
-            const payload: ServerSEPayload[ServerSE.MOVE_CARD] = {...data};
+            const date = new Date();
+            await moveCardToList(data.cardId, data.toList, date, data.toSprint, data.position);
+            const payload: ServerSEPayload[ServerSE.MOVE_CARD] = {...data, newDate: date};
             broadcastToMyRoom(socket, ServerSE.MOVE_CARD, payload);
         } catch (error: any) {
             reply(undefined, error.message);
