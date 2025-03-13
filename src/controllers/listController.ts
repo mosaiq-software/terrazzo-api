@@ -12,6 +12,8 @@ import {getAllCardsOfList, updateCardFromPartial} from "@trz-api/controllers/car
 import { arrayMove, updateBaseFromPartial } from "@mosaiq/terrazzo-common/utils/arrayUtils";
 import {ListType} from "../../../terrazzo-common/dist/constants";
 import {CardId} from "../../../terrazzo-common/dist/types";
+import {getCardsBySprintId} from "@trz-api/persistence/cardPersistence";
+import {copyCard} from "@trz-api/persistence/burndownPersistence";
 
 //Gets
 
@@ -142,4 +144,16 @@ export async function getListType(listID: ListId) {
 
 export async function endSprint(listID: ListId){
     //create sprint report here
+    if(!listID){
+        throw new Error("No list ID provided");
+    }
+    const cards = await getCardsBySprintId(listID);
+
+    if(!cards){
+        throw new Error("No cards found for sprint");
+    }
+
+    for(const card of cards){
+        await copyCard(card);
+    }
 }

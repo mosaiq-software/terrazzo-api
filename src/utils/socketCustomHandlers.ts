@@ -255,6 +255,7 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
             broadcastToMyselfAndMyRoom(socket, ServerSE.UPDATE_LIST_FIELD, listPayload);
 
             //make sprint report here
+            await endSprint(data);
         } catch (error: any) {
             console.error("Error updating list fields", error);
             reply(undefined, error.message);
