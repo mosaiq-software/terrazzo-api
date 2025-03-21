@@ -1,136 +1,199 @@
-import { validateGithubAuthToken } from "@trz-api/utils/authUtils";
-import axios from "axios";
-import { Request, Response } from "express";
-import queryString from "query-string";
+import { EntityType } from "@mosaiq/terrazzo-common/constants";
+import { BoardId, List, Member, MembershipRecord, MembershipRecordId, OrganizationId, ProjectId, UserDash, UserHeader, UserId } from "@mosaiq/terrazzo-common/types";
+import { deleteMembershipRecord, getMembershipById, getMembershipRecordsForUser, updateMembershipRecord } from "@trz-api/persistence/membershipPersistence";
+import { getOrgById } from "@trz-api/persistence/organizationPersistence";
+import { getProjectById, getProjectsByOrgId } from "@trz-api/persistence/projectPersistence";
+import {
+    createUser,
+    getUserByGithubId,
+    getUserById,
+    getUserByUsername,
+    updateUser
+} from "@trz-api/persistence/userPersistence";
+import {getPrivateGitHubUserData, getPublicGithubUserDataFromGithubUserId} from "@trz-api/utils/githubUtils";
+import { getInvitesToUser } from "./inviteController";
+import { addOrganization, getMembersInOrg, updateOrganizationFromPartial } from "./organizationController";
+import { addProject } from "./projectController";
+import { addBoard } from "./boardController";
+import { addList } from "./listController";
+import { addCard } from "./cardController";
+import { updateBaseFromPartial } from "@mosaiq/terrazzo-common/utils/arrayUtils";
 
-export const githubAuth = async (req: Request, res: Response) => {
-    const code = req.query.code as string;
-    if (!code) {
-        return res.status(400).send('No code provided');
+//Gets
+export async function getOrCreateUserByGithubAccessToken(accessToken: string) {
+    const githubData = await getPrivateGitHubUserData(accessToken);
+    if(!githubData){
+        throw new Error("Cant find an account with that access token");
     }
-    const access_token = await getAccessTokenFromCode(code);
-    if (!access_token) {
-        return res.status(400).send('Invalid code');
-    }
+    let user = await getUserByGithubId(githubData.id);
+
     try{
-        await validateGithubAuthToken(access_token);
-    } catch (error: any) {
-        res.status(401).json(error.message);
-        return;
-    }
-    res.status(200).json({ access_token });
-};
-
-export const githubUserData = async (req: Request, res: Response) => {
-    const access_token = req.query.access_token as string;
-    if (!access_token) {
-        return res.status(400).send('No access token provided');
-    }
-    try{
-        await validateGithubAuthToken(access_token);
-    } catch (error: any) {
-        res.status(401).json(error.message);
-        return;
-    }
-    const userData = await getPrivateGitHubUserData(access_token);
-    res.status(200).json(userData);
-}
-
-async function getAccessTokenFromCode(code:string) {
-    try{
-        const { data } = await axios({
-            url: 'https://github.com/login/oauth/access_token',
-            method: 'get',
-            params: {
-                client_id: process.env.GITHUB_AUTH_CLIENT_ID,
-                client_secret: process.env.GITHUB_AUTH_CLIENT_SECRET,
-                redirect_uri: process.env.GITHUB_AUTH_CALLBACK_URL,
-                code,
-            },
-        });
-        const parsedData = queryString.parse(data);
-        if (parsedData.error) 
-            throw new Error(parsedData.error_description as string);
-        return parsedData.access_token as string;
-    }catch(error){
-        return null;
-    }
-};
-
-export async function getPrivateGitHubUserData(access_token: string) {
-    try{
-        const { data } = await axios({
-            url: 'https://api.github.com/user',
-            method: 'get',
-            headers: {
-                Authorization: `token ${access_token}`,
-            },
-        });
-        return data;
-    } catch (error) {
-        return null;
-    }
-};
-
-export async function getPublicGithubUserDataFromGithubUserId(githubId: string) {
-    try {
-        const { data } = await axios({
-            url: `https://api.github.com/user/${githubId}`,
-            method: 'get',
-        });
-        return data;
-    } catch (error) {
-        return null;
-    }
-}
-
-export async function getOrgMemberIds(org: string, access_token: string) {
-    const members = await getOrgMembershipData(org, access_token);
-    if (!members) {
-        return [];
-    }
-    return members.map((member: any) => member.id);
-}
-export async function getOrgMembershipData(org: string, access_token: string) {
-    try {
-        const { data } = await axios({
-            url: `https://api.github.com/orgs/${org}/members`,
-            method: 'get',
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-                'X-GitHub-Api-Version': '2022-11-28',
-            },
-        });
-        return data;
-    } catch (error) {
-        return null;
-    }
-};
-
-export const revokeGithubAuth = async (access_token: string) => {
-    try{
-        await validateGithubAuthToken(access_token);
-    } catch (error: any) {
-        throw new Error("Unable to validate auth token");
-    }
-    try {
-        const credentials = `${process.env.GITHUB_AUTH_CLIENT_ID}:${process.env.GITHUB_AUTH_CLIENT_SECRET}`;
-        const encodedCredentials = btoa(credentials);
-        const response = await fetch(`https://api.github.com/applications/${process.env.GITHUB_AUTH_CLIENT_ID}/grant`, {
-            method: 'DELETE',
-            headers: {
-                Authorization: `Basic ${encodedCredentials}`,
-                Accept: 'application/vnd.github+json',
-                'X-GitHub-Api-Version': '2022-11-28',
-            },
-            body: JSON.stringify({
-                access_token: access_token
-            })
-        });
-        if(!response.ok){
-            throw new Error("Unable to revoke access token");
+        if(user == null) {
+            user = await createNewUser("", "", "", "", githubData.id);
+            return user;
         }
-    } catch (error:any) {
-        throw new Error("Unable to revoke access token");
+
+        return user;
+    }catch (e) {
+        throw new Error("Failed to retrieve user" + e);
     }
+}
+
+
+export async function checkUsernameTaken(username: string) {
+    const user = await getUserByUsername(username);
+    return user != null;
+}
+
+
+//Creates
+export async function createNewUser(username: string, firstName: string, lastName: string, profilePicture: string, githubUserId: string) {
+
+    if(username.length > 13) {
+        throw new Error("Username must be 13 characters or less");
+    }
+    if(await getUserByUsername(username) != null) {
+        throw new Error("Username already exists");
+    }
+
+    const ghProfile = await getPublicGithubUserDataFromGithubUserId(githubUserId);
+
+    const newUser:UserHeader = {
+        id: crypto.randomUUID(),
+        username: username || "",
+        firstName: firstName,
+        lastName: lastName,
+        profilePicture: profilePicture || ghProfile?.avatar_url || "",
+        githubUserId: githubUserId
+    };
+
+    try {
+        await createUser(newUser);
+    } catch (e) {
+        throw new Error("Failed to create user" + e);
+    }
+
+    return newUser;
+}
+
+//Updates
+
+export async function setupUser(userId: UserId, username: string, firstName: string, lastName:string) {
+
+    const user = await getUserById(userId);
+
+    if(user == null) {
+        throw new Error("User not found");
+    }
+
+    user.username = username;
+    user.firstName = firstName;
+    user.lastName = lastName;
+
+    try {
+        await updateUser(user);
+
+    } catch (e) {
+        throw new Error("Failed to update user" + e);
+    }
+
+    // create a default personal org for the user to have projects in
+    try {
+        const personalOrgId:OrganizationId = await addOrganization(firstName+"'s Space", user.id, true);
+        await updateOrganizationFromPartial(personalOrgId, {logoUrl: user.profilePicture, description: "A place to keep your personal projects"});
+        const personalProjectId:ProjectId = await addProject("My First Project", personalOrgId);
+        const personalBoardId:BoardId = await addBoard("Task Tracking", "", personalProjectId);
+        const personalListTodo:List = await addList(personalBoardId, "To do");
+        const personalListDoing:List = await addList(personalBoardId, "Doing");
+        const personalListDone:List = await addList(personalBoardId, "Done");
+        await addCard(personalListTodo.id, "🔎 Explore Terrazzo!");
+        await addCard(personalListTodo.id, "📃 Add a card to a list");
+        await addCard(personalListTodo.id, "🧱 Start my own project");
+        await addCard(personalListTodo.id, "😀 Invite some friends");
+    } catch (e) {
+        throw new Error("Failed to create users personal organization "+e)
+    }
+
+    return user;
+}
+
+
+export const getUsersEntities = async (userId: UserId): Promise<UserDash> => {
+    try {
+        const projectMemberships = await getMembershipRecordsForUser(userId, EntityType.PROJECT) ?? [];
+        const orgMemberships = await getMembershipRecordsForUser(userId, EntityType.ORG) ?? [];
+
+
+        const standaloneProjects = (await Promise.all(projectMemberships.map(async (p)=>{
+            const project = await getProjectById(p.entityId);
+            if(!project) return null;
+            const members = await getMembersInOrg(project.orgId);
+            return {...project, members, myMembershipRecord: p};
+        }))).filter(p=>!!p);
+
+        const organizations = (await Promise.all(orgMemberships.map(async (o)=>{
+            const org = await getOrgById(o.entityId);
+            if(!org) return null;
+            const projects = await getProjectsByOrgId(org.id);
+            const members = await getMembersInOrg(org.id);
+            return {...org, projects, members, myMembershipRecord: o};
+        }))).filter(o=>!!o);
+
+        const invites = await getInvitesToUser(userId);
+
+        return {standaloneProjects, organizations, invites};
+    } catch (e) {
+        console.error(e);
+        throw e;
+    }
+}
+
+export const getUserPreview = async (userId: UserId) => {
+    const user = await getUserById(userId);
+    if(!user){
+        throw new Error("No user found");
+    }
+    return user;
+}
+
+export async function updateMembershipRecordFromPartial(recordId: MembershipRecordId, partial:Partial<MembershipRecord>) {
+    const updatingRecord = await getMembershipById(recordId);
+    if (updatingRecord == null) {
+        throw new Error("Membership record not found");
+    }
+
+    const updated = updateBaseFromPartial<MembershipRecord>(updatingRecord, partial);
+    try {
+        await updateMembershipRecord(updated);
+        return updated;
+    } catch (e:any) {
+        throw new Error("Failed to update record "+e);
+    }
+}
+
+export const removeMembership = async (membershipRecordId: MembershipRecordId): Promise<Member | undefined> => {
+    const record = await getMembershipById(membershipRecordId);
+    if(!record){
+        throw new Error("Record not found");
+    }
+
+    const members = (await populateMemberships([record]));
+    if(!members || members.length === 0){
+        throw new Error("Couldnt populate records");
+    }
+
+    const member = members[0]
+    
+    await deleteMembershipRecord(membershipRecordId);
+    return member;
+}
+
+export const populateMemberships = async (records: MembershipRecord[]) => {
+    const members = (await Promise.all(records.map(async (r)=>{
+        return {
+            record: r,
+            user: await getUserById(r.userId),
+        }
+    }))).filter(m=>!!m.user) as Member[];
+    return members;
 }
