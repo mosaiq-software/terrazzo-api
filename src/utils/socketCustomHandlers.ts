@@ -525,7 +525,7 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
                 throw new Error('No comment data provided');
             }
             console.log(data)
-            const comment = await addComment(data.cardId, data.content, data.postedAt, data.postedById);
+            const comment = await addComment(data.id, data.content, data.postedAt, data.postedBy);
             broadcastToMyselfAndMyRoom(socket, ServerSE.CREATE_COMMENT, comment);
             reply({ commentId: comment });
         } catch (error: any) {
