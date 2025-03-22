@@ -526,7 +526,7 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
             }
             console.log(data)
             const comment = await addComment(data.id, data.content, data.postedAt, data.postedBy);
-            broadcastToMyselfAndMyRoom(socket, ServerSE.CREATE_COMMENT, comment);
+            //broadcastToMyselfAndMyRoom(socket, ServerSE.CREATE_COMMENT, comment);
             reply({ commentId: comment });
         } catch (error: any) {
             console.error("Error creating comment", error);
