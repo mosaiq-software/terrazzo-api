@@ -85,6 +85,7 @@ export async function addCard(listID:ListId, cardName:string) {
     }
 
     const cardUid = crypto.randomUUID();
+
     const newCard: Card = {
         id:cardUid,
         listId:listID,
@@ -92,6 +93,7 @@ export async function addCard(listID:ListId, cardName:string) {
         name:cardName,
         descriptionTextBlockId: cardUid, // placeholder id
         priority:null,
+        dateCompleted: null,
         storyPoints:null,
         sprintId:"",
         assignees:[],
