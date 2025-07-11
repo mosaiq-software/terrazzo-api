@@ -1,6 +1,6 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from './dbHelper';
-import {Card, CardHeader, CardId, ListId} from '@mosaiq/terrazzo-common/types';
+import {Card, CardHeader, CardId, ListId, UserId} from '@mosaiq/terrazzo-common/types';
 
 class CardModel extends Model {}
 CardModel.init({
@@ -19,7 +19,9 @@ CardModel.init({
     storyPoints: DataTypes.INTEGER,
     sprintId: DataTypes.STRING,
     archived: DataTypes.BOOLEAN,
-    order: DataTypes.INTEGER
+    order: DataTypes.INTEGER, 
+    creatorId: DataTypes.STRING,
+    creationDate: DataTypes.DATE
 }, { sequelize, modelName: 'cardModel' });
 
 sequelize.sync();
@@ -53,7 +55,9 @@ export const createCardOnList = async (card: CardHeader, listId: ListId) => {
         storyPoints: card.storyPoints,
         sprintId: card.sprintId,
         archived: false,
-        order: card.order
+        order: card.order,
+        creatorId: card.creatorId,
+        creationDate: card.creationDate
     });
 };
 

@@ -10,10 +10,11 @@ import {
 } from "@trz-api/persistence/cardPersistence";
 import {getListById, getNextListOrder} from "@trz-api/persistence/listPersistence";
 import {getBoardById, updateBoard} from "@trz-api/persistence/boardPersistence";
-import {BoardId, Card, CardHeader, CardId, ListId} from "@mosaiq/terrazzo-common/types";
+import {Card, CardHeader, CardId, ListId, UserId} from "@mosaiq/terrazzo-common/types";
 import { createTextBlock } from "@trz-api/persistence/textBlockPersistence";
 import { updateBaseFromPartial } from "@mosaiq/terrazzo-common/utils/arrayUtils";
 import { getAssignmentsForCard } from "@trz-api/persistence/assignmentPersistence";
+import { getUserById } from "@trz-api/persistence/userPersistence";
 
 export const MOVING_LIST_ORDER = -10000;
 //Gets
@@ -68,8 +69,9 @@ export async function getSingleFullCard (cardId: CardId): Promise<Card | undefin
  * Returns the ID of the new card
  * @param listID
  * @param cardName
+ * @param UserId
  */
-export async function addCard(listID:ListId, cardName:string) {
+export async function addCard(listID:ListId, cardName:string, postedById: UserId) {
     //pull board from db with ID
     const updatingList = await getListById(listID);
 
@@ -84,7 +86,7 @@ export async function addCard(listID:ListId, cardName:string) {
     }
 
     const cardUid = crypto.randomUUID();
-    const newCard: Card = {
+    const newCard: CardHeader = {
         id:cardUid,
         listId:listID,
         cardNumber:(board.totalCards + 1),
@@ -93,11 +95,10 @@ export async function addCard(listID:ListId, cardName:string) {
         priority:null,
         storyPoints:null,
         sprintId:"",
-        assignees:[],
-        comments:[],
-        labels:[],
         archived:false,
-        order: await getNextCardOrder(listID)
+        order: await getNextCardOrder(listID),
+        creatorId: postedById,
+        creationDate: new Date()
     };
     try {
         const descBlock = await createTextBlock();
@@ -216,6 +217,7 @@ export const populateCards = async (cardHeaders:CardHeader[]): Promise<Card[]> =
             assignees: await getAssignmentsForCard(c.id),
             labels: [],
             comments: [],
+            creator: await getUserById(c.creatorId)
         };
         return cc;
     }));

@@ -30,6 +30,8 @@ import { getRoomCode } from '@mosaiq/terrazzo-common/utils/socketUtils';
 import { getListById } from '@trz-api/persistence/listPersistence';
 import { getCardById } from '@trz-api/persistence/cardPersistence';
 import { addComment } from '@trz-api/controllers/commentController';
+import { userInfo } from 'os';
+import { error } from 'console';
 
 export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
     socket.on(ClientSE.JOIN_ROOM, async (room: ClientSEPayload[ClientSE.JOIN_ROOM], reply: ClientSEReply<ClientSE.JOIN_ROOM>) => {
@@ -240,11 +242,17 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
     });
 
     socket.on(ClientSE.CREATE_CARD, async (data: ClientSEPayload[ClientSE.CREATE_CARD], reply: ClientSEReply<ClientSE.CREATE_CARD>) => {
+
+      
         try {
             if (!data) {
                 throw new Error('No card data provided');
             }
-            const card = await addCard(data.listID, data.cardName);
+            const socketData = getSocketData(socket);
+            if(!socketData){
+                throw new Error("Error getting socket data");
+            }
+            const card = await addCard(data.listID, data.cardName, socketData.user.user.id);
             const boardId = await getBoardIDFromCardID(card.id);
             if(boardId){
                 broadcast<ServerSE.ADD_CARD>(socket, ServerSE.ADD_CARD, card, [getRoomCode(RoomType.DATA, boardId)]);
