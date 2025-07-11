@@ -533,12 +533,12 @@ export const registerCustomSocketEvents = (socket: Socket, io: Server) => {
                 throw new Error('No comment data provided');
             }
             console.log(data)
-            const comment = await addComment(data.id, data.content, data.postedAt, data.postedBy);
+            const CommentId = await addComment(data.cardId, data.content, data.postedAt, data.postedById);
             //broadcastToMyselfAndMyRoom(socket, ServerSE.CREATE_COMMENT, comment);
-            reply({ commentId: comment });
+            reply( CommentId );
         } catch (error: any) {
             console.error("Error creating comment", error);
-            reply({ commentId: "" }, error.message);
+            reply(undefined, error.message);
         }
     });
 };
