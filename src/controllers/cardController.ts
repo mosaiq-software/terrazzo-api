@@ -10,11 +10,12 @@ import {
 } from "@trz-api/persistence/cardPersistence";
 import {getListById, getNextListOrder} from "@trz-api/persistence/listPersistence";
 import {getBoardById, updateBoard} from "@trz-api/persistence/boardPersistence";
-import {Card, CardHeader, CardId, ListId, UserId} from "@mosaiq/terrazzo-common/types";
+import {Card, CardHeader, CardId, LabelId, ListId, UserId} from "@mosaiq/terrazzo-common/types";
 import { createTextBlock } from "@trz-api/persistence/textBlockPersistence";
 import { updateBaseFromPartial } from "@mosaiq/terrazzo-common/utils/arrayUtils";
 import { getAssignmentsForCard } from "@trz-api/persistence/assignmentPersistence";
 import { getUserById } from "@trz-api/persistence/userPersistence";
+import { addLabelToCard, deleteLabelsOnCard, getLabelsOnCard } from "@trz-api/persistence/labelPersistence";
 
 export const MOVING_LIST_ORDER = -10000;
 //Gets
@@ -215,10 +216,17 @@ export const populateCards = async (cardHeaders:CardHeader[]): Promise<Card[]> =
         const cc:Card = {
             ...c,
             assignees: await getAssignmentsForCard(c.id),
-            labels: [],
+            labels: await getLabelsOnCard(c.id),
             comments: [],
             creator: await getUserById(c.creatorId)
         };
         return cc;
     }));
+}
+
+export const setCardsLabels = async (cardId:CardId, labelIds:LabelId[]) => {
+    await deleteLabelsOnCard(cardId);
+    for(const labelId of labelIds){
+        addLabelToCard(labelId, cardId);
+    }
 }
