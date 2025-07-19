@@ -16,8 +16,9 @@ import { addOrganization, getMembersInOrg, updateOrganizationFromPartial } from 
 import { addProject } from "./projectController";
 import { addBoard } from "./boardController";
 import { addList } from "./listController";
-import { addCard } from "./cardController";
+import {addCard, getSingleFullCard} from "./cardController";
 import { updateBaseFromPartial } from "@mosaiq/terrazzo-common/utils/arrayUtils";
+import { getAssignmentsForUser } from "@trz-api/persistence/assignmentPersistence";
 
 //Gets
 export async function getOrCreateUserByGithubAccessToken(accessToken: string) {
@@ -122,7 +123,7 @@ export const getUsersEntities = async (userId: UserId): Promise<UserDash> => {
     try {
         const projectMemberships = await getMembershipRecordsForUser(userId, EntityType.PROJECT) ?? [];
         const orgMemberships = await getMembershipRecordsForUser(userId, EntityType.ORG) ?? [];
-
+        const assignedCardIds = await getAssignmentsForUser(userId) ?? [];
 
         const standaloneProjects = (await Promise.all(projectMemberships.map(async (p)=>{
             const project = await getProjectById(p.entityId);
@@ -141,7 +142,13 @@ export const getUsersEntities = async (userId: UserId): Promise<UserDash> => {
 
         const invites = await getInvitesToUser(userId);
 
-        return {standaloneProjects, organizations, invites};
+        const assignedCards = (await Promise.all(assignedCardIds.map(async (id) => {
+            const card = await getSingleFullCard(id);
+            if (!card) return null;
+            return card;
+        }))).filter((o) => !!o);
+
+        return {assignedCards, standaloneProjects, organizations, invites};
     } catch (e) {
         console.error(e);
         throw e;
